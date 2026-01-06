@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.20;
+// @audit-info Solidity 0.8.20 includes PUSH0 opcode which could be not compatible with some EVM networks
 
 import { ITSwapPool } from "../interfaces/ITSwapPool.sol";
 import { IPoolFactory } from "../interfaces/IPoolFactory.sol";
@@ -18,9 +19,12 @@ contract OracleUpgradeable is Initializable {
 
     function getPriceInWeth(address token) public view returns (uint256) {
         address swapPoolOfToken = IPoolFactory(s_poolFactory).getPool(token);
+        // @audit-issue - HIGH - The price can be manipulated doing a big swap in the pool. TWAP should be used instead.
+        // @audit Check the tests. You should use forked tests for this.
         return ITSwapPool(swapPoolOfToken).getPriceOfOnePoolTokenInWeth();
     }
 
+    // @audit-info This function is redundant
     function getPrice(address token) external view returns (uint256) {
         return getPriceInWeth(token);
     }

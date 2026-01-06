@@ -15,3 +15,9 @@ docs/
 broadcast/ 
 .notes.md
 .DS_Store
+
+/.vscode
+
+# Audit info
+aderyn-report.md
+slither.config.json

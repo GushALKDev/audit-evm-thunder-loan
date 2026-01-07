@@ -19,7 +19,10 @@ contract OracleUpgradeable is Initializable {
 
     function getPriceInWeth(address token) public view returns (uint256) {
         address swapPoolOfToken = IPoolFactory(s_poolFactory).getPool(token);
-        // @audit-issue - HIGH - The price can be manipulated doing a big swap in the pool. TWAP should be used instead.
+        // @audit-issue - MEDIUM -> IMPACT: MEDIUM/LOW - LIKELIHOOD: HIGH 
+        // @audit-issue - The price can be manipulated doing a big swap in the pool for getting cheap fees.
+        // @audit-issue - TWAP should be used instead.
+        // @audit-issue - POC: ThunderLoanTest::testOracleManipulation
         // @audit Check the tests. You should use forked tests for this.
         return ITSwapPool(swapPoolOfToken).getPriceOfOnePoolTokenInWeth();
     }

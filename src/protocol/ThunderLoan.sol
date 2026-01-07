@@ -250,6 +250,10 @@ contract ThunderLoan is Initializable, OwnableUpgradeable, UUPSUpgradeable, Orac
         );
 
         uint256 endingBalance = token.balanceOf(address(assetToken));
+        // @audit-issue - HIGH -> IMPACT: HIGH - LIKELIHOOD: HIGH
+        // @audit-issue - POC: ThunderLoanTest.t.sol::testDepositInsteadOfRepay()
+        // @audit-issue - If you deposit instead of repaying, you will get free shares of the asset token while repaying the flash loan
+        // @audit-issue - Recommended mitigation: Block the deposit function while the flash loan is active using a modifier with a storage flag or transient storage if your solidity version is 0.8.24 or higher
         if (endingBalance < startingBalance + fee) {
             revert ThunderLoan__NotPaidBack(startingBalance + fee, endingBalance);
         }
@@ -259,6 +263,8 @@ contract ThunderLoan is Initializable, OwnableUpgradeable, UUPSUpgradeable, Orac
     // @audit-info Function could be marked as external
     // @audit-info User could just call transfer to repay the flash loan, why we have this function?
     function repay(IERC20 token, uint256 amount) public {
+        // @audit-issue - LOW -> IMPACT: MEDIUM - LIKELIHOOD: LOW
+        // @audit-issue - If you take a nested flash loan with the same token, you can't pay the second flash loan because s_currentlyFlashLoaning[token] was set to false in the first repayment.
         if (!s_currentlyFlashLoaning[token]) {
             revert ThunderLoan__NotCurrentlyFlashLoaning();
         }

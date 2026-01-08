@@ -96,6 +96,11 @@ contract ThunderLoanUpgraded is Initializable, OwnableUpgradeable, UUPSUpgradeab
     mapping(IERC20 => AssetToken) public s_tokenToAssetToken;
 
     // The fee in WEI, it should have 18 decimals. Each flash loan takes a flat fee of the token price.
+    // @audit-issue - HIGH - IMPACT: HIGH - LIKELIHOOD: HIGH
+    // @audit-issue - Storage shifted because the variable s_feePrecision was changed to constant and shifted on storage
+    // @audit-issue - This will break the storare if the contract is upgraded
+    // @audit-issue - POC: ThundeLoanTest::testUpgradeBreaks()
+    // @audit-issue - Recommended mitigation: If you must remove a variable, leave it blank as to not mess up the storage slots 
     uint256 private s_flashLoanFee; // 0.3% ETH fee
     uint256 public constant FEE_PRECISION = 1e18;
 
@@ -291,7 +296,6 @@ contract ThunderLoanUpgraded is Initializable, OwnableUpgradeable, UUPSUpgradeab
         return s_flashLoanFee;
     }
 
-    // @audit-info Empty function
     // @audit-info Centralization issue
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner { }
 }

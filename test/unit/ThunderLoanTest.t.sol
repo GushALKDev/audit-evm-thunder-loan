@@ -9,6 +9,7 @@ import { BuffMockPoolFactory } from "../mocks/BuffMockPoolFactory.sol";
 import { BuffMockTSwap } from "../mocks/BuffMockTSwap.sol";
 import { IFlashLoanReceiver } from "../../src/interfaces/IFlashLoanReceiver.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { ThunderLoanUpgraded } from "../../src/upgradedProtocol/ThunderLoanUpgraded.sol";
 
 contract ThunderLoanTest is BaseTest {
     uint256 constant AMOUNT = 10e18;
@@ -225,6 +226,18 @@ contract ThunderLoanTest is BaseTest {
 
         assert(assetBalanceAfterRedeem > assetBalanceBeforeRedeem);
 
+    }
+
+    function testUpgradeBreaks() public {
+        uint256 feeBeforeUpgrade = thunderLoan.getFee();
+        vm.startPrank(thunderLoan.owner());
+        ThunderLoanUpgraded upgraded = new ThunderLoanUpgraded();
+        thunderLoan.upgradeToAndCall(address(upgraded), "");
+        vm.stopPrank();
+        uint256 feeAfterUpgrade = upgraded.getFee();
+        console2.log("Fee before upgrade", feeBeforeUpgrade);
+        console2.log("Fee after upgrade", feeAfterUpgrade);
+        assertEq(feeBeforeUpgrade, feeAfterUpgrade);
     }
 }
 

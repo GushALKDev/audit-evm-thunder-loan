@@ -62,7 +62,7 @@
 //  ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀  ▀         ▀  ▀        ▀▀
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.20;
-// @audit-info Solidity 0.8.20 includes PUSH0 opcode which could be not compatible with some EVM networks
+// @audit-info-written Solidity 0.8.20 includes PUSH0 opcode which could be not compatible with some EVM networks
 
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { AssetToken } from "./AssetToken.sol";
@@ -74,8 +74,8 @@ import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils
 import { OracleUpgradeable } from "./OracleUpgradeable.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { IFlashLoanReceiver } from "../interfaces/IFlashLoanReceiver.sol";
-// @audit-issue implement this interface
-// @audit-issue import { IThunderLoan } from "../interfaces/IThunderLoan.sol";
+// @audit-issue-written implement this interface
+// @audit-issue-written import { IThunderLoan } from "../interfaces/IThunderLoan.sol";
 
 contract ThunderLoan is Initializable, OwnableUpgradeable, UUPSUpgradeable, OracleUpgradeable {
     error ThunderLoan__NotAllowedToken(IERC20 token);
@@ -84,7 +84,7 @@ contract ThunderLoan is Initializable, OwnableUpgradeable, UUPSUpgradeable, Orac
     error ThunderLoan__NotEnoughTokenBalance(uint256 startingBalance, uint256 amount);
     error ThunderLoan__CallerIsNotContract();
     error ThunderLoan__AlreadyAllowed();
-    // @audit-info Event not used
+    // @audit-info-written Event not used
     error ThunderLoan__ExhangeRateCanOnlyIncrease();
     error ThunderLoan__NotCurrentlyFlashLoaning();
     error ThunderLoan__BadNewFee();
@@ -141,7 +141,7 @@ contract ThunderLoan is Initializable, OwnableUpgradeable, UUPSUpgradeable, Orac
     /*//////////////////////////////////////////////////////////////
                            EXTERNAL FUNCTIONS
     //////////////////////////////////////////////////////////////*/
-    // @audit-issue - LOW - If we deploy the contract and don't initializr it, someone can frontrun and do it with a wrong/malicious address
+    // @audit-issue-written - LOW - If we deploy the contract and don't initializr it, someone can frontrun and do it with a wrong/malicious address
     // audit-issue - Recommended mitigation: Initialize the contract just after deployment in the same script
     function initialize(address tswapAddress) external initializer {
         __Ownable_init(msg.sender);
@@ -153,7 +153,7 @@ contract ThunderLoan is Initializable, OwnableUpgradeable, UUPSUpgradeable, Orac
         s_flashLoanFee = 3e15; // 0.3% ETH fee
     }
 
-    // @audit-info Missing NatSpec
+    // @audit-info-written Missing NatSpec
     function deposit(IERC20 token, uint256 amount) external revertIfZero(amount) revertIfNotAllowedToken(token) {
         // @audit Shared token
         AssetToken assetToken = s_tokenToAssetToken[token];
@@ -170,9 +170,9 @@ contract ThunderLoan is Initializable, OwnableUpgradeable, UUPSUpgradeable, Orac
         // @audit-answered-question - Why we are updating the exchange rate in the deposit?
         // @audit-answer - It's a bug, it should be done in the flash loan
         assetToken.updateExchangeRate(calculatedFee);
-        // @audit-issue - HIGH -> IMPACT: HIGH - LIKELIHOOD: HIGH
-        // @audit-issue - We are updating the exchange rate in the deposit, but it only should be done in the flash loan
-        // @audit-issue - POC: ThunderLoanTest.t.sol::testRedeem()
+        // @audit-issue-written - HIGH -> IMPACT: HIGH - LIKELIHOOD: HIGH
+        // @audit-issue-written - We are updating the exchange rate in the deposit, but it only should be done in the flash loan
+        // @audit-issue-written - POC: ThunderLoanTest.t.sol::testRedeem()
 
         // @audit When user deposits, the money goes to the asset token contract
         token.safeTransferFrom(msg.sender, address(assetToken), amount);
@@ -202,7 +202,7 @@ contract ThunderLoan is Initializable, OwnableUpgradeable, UUPSUpgradeable, Orac
         assetToken.transferUnderlyingTo(msg.sender, amountUnderlying);
     }
 
-    // @audit-info Missing NatSpec
+    // @audit-info-written Missing NatSpec
     function flashloan(
         address receiverAddress,    // @audit The address of the contract that will receive the flash loan
         IERC20 token,               // @audit The token to borrow
@@ -250,21 +250,21 @@ contract ThunderLoan is Initializable, OwnableUpgradeable, UUPSUpgradeable, Orac
         );
 
         uint256 endingBalance = token.balanceOf(address(assetToken));
-        // @audit-issue - HIGH -> IMPACT: HIGH - LIKELIHOOD: HIGH
-        // @audit-issue - POC: ThunderLoanTest.t.sol::testDepositInsteadOfRepay()
-        // @audit-issue - If you deposit instead of repaying, you will get free shares of the asset token while repaying the flash loan
-        // @audit-issue - Recommended mitigation: Block the deposit function while the flash loan is active using a modifier with a storage flag or transient storage if your solidity version is 0.8.24 or higher
+        // @audit-issue-written - HIGH -> IMPACT: HIGH - LIKELIHOOD: HIGH
+        // @audit-issue-written - POC: ThunderLoanTest.t.sol::testDepositInsteadOfRepay()
+        // @audit-issue-written - If you deposit instead of repaying, you will get free shares of the asset token while repaying the flash loan
+        // @audit-issue-written - Recommended mitigation: Block the deposit function while the flash loan is active using a modifier with a storage flag or transient storage if your solidity version is 0.8.24 or higher
         if (endingBalance < startingBalance + fee) {
             revert ThunderLoan__NotPaidBack(startingBalance + fee, endingBalance);
         }
         s_currentlyFlashLoaning[token] = false;
     }
 
-    // @audit-info Function could be marked as external
+    // @audit-info-written Function could be marked as external
     // @audit-info User could just call transfer to repay the flash loan, why we have this function?
     function repay(IERC20 token, uint256 amount) public {
-        // @audit-issue - LOW -> IMPACT: MEDIUM - LIKELIHOOD: LOW
-        // @audit-issue - If you take a nested flash loan with the same token, you can't pay the second flash loan because s_currentlyFlashLoaning[token] was set to false in the first repayment.
+        // @audit-issue-written - LOW -> IMPACT: MEDIUM - LIKELIHOOD: LOW
+        // @audit-issue-written - If you take a nested flash loan with the same token, you can't pay the second flash loan because s_currentlyFlashLoaning[token] was set to false in the first repayment.
         if (!s_currentlyFlashLoaning[token]) {
             revert ThunderLoan__NotCurrentlyFlashLoaning();
         }
@@ -272,7 +272,7 @@ contract ThunderLoan is Initializable, OwnableUpgradeable, UUPSUpgradeable, Orac
         token.safeTransferFrom(msg.sender, address(assetToken), amount);
     }
 
-    // @audit-info Centralization issue
+    // @audit-info-written Centralization issue
     function setAllowedToken(IERC20 token, bool allowed) external onlyOwner returns (AssetToken) {
         if (allowed) {
             if (address(s_tokenToAssetToken[token]) != address(0)) {
@@ -294,7 +294,7 @@ contract ThunderLoan is Initializable, OwnableUpgradeable, UUPSUpgradeable, Orac
         }
     }
 
-    // @audit-info Missing NatSpec
+    // @audit-info-written Missing NatSpec
     // @audit This is the fee of the flash loan
     // @audit How is it calculating the fee?
     // @audit @param token is the token to borrow
@@ -303,32 +303,32 @@ contract ThunderLoan is Initializable, OwnableUpgradeable, UUPSUpgradeable, Orac
         //slither-disable-next-line divide-before-multiply
         // @audit-answered-question Is this correct?
         // @audit-answer No, it's wrong
-        // @audit-issue - HIGH - IMPACT: HIGH - LIKELIHOOD: HIGH
-        // @audit-issue - If the fee is going to be in the token, then the value should be in units of the token not in WETH
+        // @audit-issue-written - HIGH - IMPACT: HIGH - LIKELIHOOD: HIGH
+        // @audit-issue-written - If the fee is going to be in the token, then the value should be in units of the token not in WETH
         uint256 valueOfBorrowedToken = (amount * getPriceInWeth(address(token))) / s_feePrecision;
         //slither-disable-next-line divide-before-multiply
         fee = (valueOfBorrowedToken * s_flashLoanFee) / s_feePrecision;
     }
 
-    // @audit-info Centralization issue
+    // @audit-info-written Centralization issue
     function updateFlashLoanFee(uint256 newFee) external onlyOwner {
         if (newFee > s_feePrecision) {
             revert ThunderLoan__BadNewFee();
         }
         s_flashLoanFee = newFee;
-        // @audit-issue - LOW Missing FeeUpdated event
+        // @audit-issue-written - LOW Missing FeeUpdated event
     }
 
     function isAllowedToken(IERC20 token) public view returns (bool) {
         return address(s_tokenToAssetToken[token]) != address(0);
     }
 
-    // @audit-info Function could be marked as external
+    // @audit-info-written Function could be marked as external
     function getAssetFromToken(IERC20 token) public view returns (AssetToken) {
         return s_tokenToAssetToken[token];
     }
 
-    // @audit-info Function could be marked as external
+    // @audit-info-written Function could be marked as external
     function isCurrentlyFlashLoaning(IERC20 token) public view returns (bool) {
         return s_currentlyFlashLoaning[token];
     }
@@ -341,6 +341,6 @@ contract ThunderLoan is Initializable, OwnableUpgradeable, UUPSUpgradeable, Orac
         return s_feePrecision;
     }
 
-    // @audit-info Centralization issue
+    // @audit-info-written Centralization issue
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner { }
 }

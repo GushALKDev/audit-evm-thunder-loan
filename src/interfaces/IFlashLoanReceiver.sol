@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.20;
-// @audit-info Solidity 0.8.20 includes PUSH0 opcode which could be not compatible with some EVM networks
+// @audit-info-written Solidity 0.8.20 includes PUSH0 opcode which could be not compatible with some EVM networks
 
-// @audit-issue Bad used import, it should be imported in from the file is being used
+// @audit-issue-written Bad used import, it should be imported in from the file is being used
 import { IThunderLoan } from "./IThunderLoan.sol";
 
 /**
@@ -11,7 +11,7 @@ import { IThunderLoan } from "./IThunderLoan.sol";
  */
 interface IFlashLoanReceiver {
     
-    // @audit-info Missing Natspec
+    // @audit-info-written Missing Natspec
     function executeOperation(
         address token,          // @audit It is the token that's being borrowed
         uint256 amount,         // @audit It is the amount that's being borrowed

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.20;
-// @audit-info Solidity 0.8.20 includes PUSH0 opcode which could be not compatible with some EVM networks
+// @audit-info-written Solidity 0.8.20 includes PUSH0 opcode which could be not compatible with some EVM networks
 
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-// @audit-info NatSpec are missing
+// @audit-info-written NatSpec are missing
 contract AssetToken is ERC20 {
     error AssetToken__onlyThunderLoan();
     error AssetToken__ExhangeRateCanOnlyIncrease(uint256 oldExchangeRate, uint256 newExchangeRate);
@@ -83,8 +83,8 @@ contract AssetToken is ERC20 {
         // @audit-info - Based on SafeERC20.sol, this will revert if the transfer fails, be aware of that with weird ERC20s
         // @audit-answered-question - What happen if weird tokens as USDC block this contract or ThuderLoan.sol?
         // @audit-answer - It will revert
-        // @audit-issue - MEDIUM -> IMPACT: HIGH - LIKELIHOOD: LOW
-        // @audit-issue - If i.e USDC is pause, blocked or any other reason, this will revert and it would leave the protocol useless
+        // @audit-issue-written - MEDIUM -> IMPACT: HIGH - LIKELIHOOD: LOW
+        // @audit-issue-written - If i.e USDC is pause, blocked or any other reason, this will revert and it would leave the protocol useless
         i_underlying.safeTransfer(to, amount);
     }
 
@@ -99,8 +99,8 @@ contract AssetToken is ERC20 {
         // newExchangeRate = oldExchangeRate * (totalSupply + fee) / totalSupply
         // newExchangeRate = 1 (4 + 0.5) / 4
         // newExchangeRate = 1.125
-        // @audit-info - GAS - We can cache s_exchangeRate and totalSupply() to avoid a multiple SLOAD
-        // @audit-issue - LOW - If totalSupply is zero, this will revert
+        // @audit-info-written - GAS - We can cache s_exchangeRate and totalSupply() to avoid a multiple SLOAD
+        // @audit-issue-written - LOW - If totalSupply is zero, this will revert
         uint256 newExchangeRate = s_exchangeRate * (totalSupply() + fee) / totalSupply();
 
         // @audit-answered-question What happen if assets are minted and the total supply is less than the previous total supply?

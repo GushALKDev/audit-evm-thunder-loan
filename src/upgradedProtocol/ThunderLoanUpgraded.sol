@@ -62,7 +62,7 @@
 //  ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀  ▀         ▀  ▀        ▀▀
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.20;
-// @audit-info Solidity 0.8.20 includes PUSH0 opcode which could be not compatible with some EVM networks
+// @audit-info-written Solidity 0.8.20 includes PUSH0 opcode which could be not compatible with some EVM networks
 
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { AssetToken } from "../protocol/AssetToken.sol";
@@ -82,7 +82,7 @@ contract ThunderLoanUpgraded is Initializable, OwnableUpgradeable, UUPSUpgradeab
     error ThunderLoan__NotEnoughTokenBalance(uint256 startingBalance, uint256 amount);
     error ThunderLoan__CallerIsNotContract();
     error ThunderLoan__AlreadyAllowed();
-    // @audit-info Event not used
+    // @audit-info-written Event not used
     error ThunderLoan__ExhangeRateCanOnlyIncrease();
     error ThunderLoan__NotCurrentlyFlashLoaning();
     error ThunderLoan__BadNewFee();
@@ -96,11 +96,11 @@ contract ThunderLoanUpgraded is Initializable, OwnableUpgradeable, UUPSUpgradeab
     mapping(IERC20 => AssetToken) public s_tokenToAssetToken;
 
     // The fee in WEI, it should have 18 decimals. Each flash loan takes a flat fee of the token price.
-    // @audit-issue - HIGH - IMPACT: HIGH - LIKELIHOOD: HIGH
-    // @audit-issue - Storage shifted because the variable s_feePrecision was changed to constant and shifted on storage
-    // @audit-issue - This will break the storare if the contract is upgraded
-    // @audit-issue - POC: ThundeLoanTest::testUpgradeBreaks()
-    // @audit-issue - Recommended mitigation: If you must remove a variable, leave it blank as to not mess up the storage slots 
+    // @audit-issue-written - HIGH - IMPACT: HIGH - LIKELIHOOD: HIGH
+    // @audit-issue-written - Storage shifted because the variable s_feePrecision was changed to constant and shifted on storage
+    // @audit-issue-written - This will break the storare if the contract is upgraded
+    // @audit-issue-written - POC: ThundeLoanTest::testUpgradeBreaks()
+    // @audit-issue-written - Recommended mitigation: If you must remove a variable, leave it blank as to not mess up the storage slots 
     uint256 private s_flashLoanFee; // 0.3% ETH fee
     uint256 public constant FEE_PRECISION = 1e18;
 

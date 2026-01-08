@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.20;
-// @audit-info Solidity 0.8.20 includes PUSH0 opcode which could be not compatible with some EVM networks
+// @audit-info-written Solidity 0.8.20 includes PUSH0 opcode which could be not compatible with some EVM networks
 
 import { ITSwapPool } from "../interfaces/ITSwapPool.sol";
 import { IPoolFactory } from "../interfaces/IPoolFactory.sol";
@@ -19,15 +19,15 @@ contract OracleUpgradeable is Initializable {
 
     function getPriceInWeth(address token) public view returns (uint256) {
         address swapPoolOfToken = IPoolFactory(s_poolFactory).getPool(token);
-        // @audit-issue - MEDIUM -> IMPACT: MEDIUM/LOW - LIKELIHOOD: HIGH 
-        // @audit-issue - The price can be manipulated doing a big swap in the pool for getting cheap fees.
-        // @audit-issue - TWAP should be used instead.
-        // @audit-issue - POC: ThunderLoanTest::testOracleManipulation
+        // @audit-issue-written - MEDIUM -> IMPACT: MEDIUM/LOW - LIKELIHOOD: HIGH 
+        // @audit-issue-written - The price can be manipulated doing a big swap in the pool for getting cheap fees.
+        // @audit-issue-written - TWAP should be used instead.
+        // @audit-issue-written - POC: ThunderLoanTest::testOracleManipulation
         // @audit Check the tests. You should use forked tests for this.
         return ITSwapPool(swapPoolOfToken).getPriceOfOnePoolTokenInWeth();
     }
 
-    // @audit-info This function is redundant
+    // @audit-info-written This function is redundant
     function getPrice(address token) external view returns (uint256) {
         return getPriceInWeth(token);
     }
